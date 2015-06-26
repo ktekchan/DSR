@@ -9,8 +9,9 @@ import os
 import re
 import math
 
+
 # Delete existing input, traffic and movement scenario files
-bashCommand = 'rm -rf input.txt cbr-test scen-test'
+bashCommand = 'rm -rf input.txt cbr-test scen-test movement-trace.txt'
 os.system(bashCommand)
 
 # Create input file for the tcl script
@@ -50,6 +51,9 @@ inputfile.close()
 # Remaining parameters for the generating the traffic and movement scenario
 # files
 
+# Path for cbrgen.tcl and setdest
+path = '/home/khushboo/ns-allinone-2.35/ns-2.35/indep-utils/cmu-scen-gen/'
+
 # Traffic file
 maxconnections = input('Enter maximum number of connections: ')
 rate = input('Enter cbr rate: ')
@@ -57,13 +61,12 @@ rate = input('Enter cbr rate: ')
 arglist =' -type cbr -nn '+str(numnodes-1)+' -seed '+str(seed)+' -mc\
  '+str(maxconnections)+' -rate '+str(rate)+' > cbr-test'
 
-bashCommand = 'ns \
-/home/khushboo/ns-allinone-2.35/ns-2.35/indep-utils/cmu-scen-gen/cbrgen.tcl \
-'+arglist
-
+print '\nGenerating traffic scenario file...\n'
+bashCommand = 'ns '+path+'cbrgen.tcl'+arglist
 os.system(bashCommand)
 
 # Movement scenario file
+print 'Enter parameters for movement scenario...\n'
 maxspeed = input('Enter maximum speed of nodes: ')
 pausetime = input('Enter pause time: ')
 
@@ -71,13 +74,22 @@ arglist = ' -v 1 -n '+str(numnodes)+' -p '+str(pausetime)+' -M '\
 +str(maxspeed)+' -t '+str(simtime)+' -x '+str(Xdim)+' -y '+str(Ydim)+\
 ' > scen-test'
 
-bashCommand='/home/khushboo/ns-allinone-2.35/ns-2.35/indep-utils/cmu-scen-gen/\
-setdest/setdest'+arglist
-
+print 'Generating movement scenario file...\n'
+bashCommand = path+'setdest/setdest'+arglist
 os.system(bashCommand)
 
 # Finally execute the wireless simulation
+print 'Executing wireless simulation...\n'
 bashCommand = 'ns wireless1.tcl'
 os.system(bashCommand)
 
+# Parse the trace file for movement traces
+print 'Parsing trace file for movement traces...\n'
+bashCommand = 'python parse-M.py'
+os.system(bashCommand)
+
+# Use this parsed file to calculate the average degree of the network
+print 'Calculating average degree of the network...\n'
+bashCommand = 'python degree.py'
+os.system(bashCommand)
 

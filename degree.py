@@ -13,11 +13,19 @@ import os
 import re
 import math
 
-numnodes = 10
+# Initialization
 trans_range = 250
 count = 0
 inst_avg = []
 current_pos = []
+
+# Read the number of nodes from the input file
+f = open('input.txt','r')
+f.seek(0)
+lines = f.read()
+lines = lines.split('\n')
+numnodes = int(lines[0])
+f.close()
 
 # Parses a line to find the current position of a node
 def parseline(line):
@@ -46,17 +54,19 @@ def calc_inst_avg(current_pos):
 
 
 # Open the trace file to read it
-f = open ('/home/khushboo/Summer_DSR/movement-trace.txt', 'r')
+f = open ('movement-trace.txt', 'r')
 lines = f.read()
 lines = lines.split('\n')       
 
 
-for line in lines:
-    words = line.split()
-
+for line in lines: 
+   
     # To get rid of any empty lines in the file
-    if not words:
+    if not line:
         continue
+    
+    words = line.split(' ')
+
 
     # It is possible to have incomplete movement entries at an instance
     # Check that each time the input of entries start with node id 0 and end at
@@ -74,6 +84,7 @@ for line in lines:
         # during the first iteration of movement information
 
         if not current_pos:
+            current_pos.append(parseline(line))
             continue
         else:
             avg = calc_inst_avg(current_pos)
@@ -83,7 +94,7 @@ for line in lines:
 
 # Find the overall average degree of the network over the entire simulation time
 average_degree = sum(inst_avg)/len(inst_avg)
-print average_degree
+print '\nThe average degree of the network is: '+str(average_degree)+'\n'
 
 # Close the file
 f.close()

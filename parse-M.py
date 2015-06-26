@@ -8,9 +8,10 @@
 import os
 import re
 
+path = '/home/khushboo/Summer_DSR/scripts/'
 # Open the trace file to read it
-f = open ('/home/khushboo/Summer_DSR/wireless1-out.tr', 'r')
-f1 = open ('/home/khushboo/Summer_DSR/movement-trace.txt', 'r+')
+f = open (path+'wireless-out.tr', 'r')
+f1 = open (path+'movement-trace.txt', 'w+')
 
 lines = f.read()
 lines = lines.split('\n')
