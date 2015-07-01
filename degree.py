@@ -49,7 +49,7 @@ def calc_inst_avg(current_pos):
             dist = calc_dist(current_pos[i],current_pos[j])
             if (dist<=trans_range):
                 connections+=1
-    inst_avg = connections/numnodes
+    inst_avg = connections/float(numnodes)
     return inst_avg
 
 
@@ -93,7 +93,7 @@ for line in lines:
             current_pos.append(parseline(line))
 
 # Find the overall average degree of the network over the entire simulation time
-average_degree = sum(inst_avg)/len(inst_avg)
+average_degree = sum(inst_avg)/float(len(inst_avg))
 print '\nThe average degree of the network is: '+str(average_degree)+'\n'
 
 # Close the file
