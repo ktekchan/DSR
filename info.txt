@@ -1,0 +1,23 @@
+This file contains information about the generic parameters for the simulation.
+These parameters will be fixed for all simulation runs.
+
+Number of nodes: 150 (DSR can handle upto 200 nodes)
+
+Area of Simulation: 1000x1000
+X dim: 1000.0 m
+Y dim: 1000.0 m
+
+Simulation time: 200.0 sec
+
+Cbr rate: 4.0 
+
+The following parameters are fixed in the tcl script
+Transmission range: 250 m
+Carrier sense range: 300 m
+
+Seed value changes to incorporate randomness.
+Pause time changes with respect to the maximum speed of the nodes.
+
+Total number of connections change with respect to requirement of the degree of
+the network. Higher the degree of the network, greater the number of
+connections.
