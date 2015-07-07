@@ -3,9 +3,9 @@ These parameters will be fixed for all simulation runs.
 
 Number of nodes: 150 (DSR can handle upto 200 nodes)
 
-Area of Simulation: 1000x1000
-X dim: 1000.0 m
-Y dim: 1000.0 m
+Area of Simulation: 1500x1500
+X dim: 1500.0 m
+Y dim: 1500.0 m
 
 Simulation time: 200.0 sec
 
