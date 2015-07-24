@@ -140,6 +140,23 @@ struct flow_default_err {
 	struct flow_error err_flows_[MAX_ROUTE_ERRORS];
 };
 
+/* 
+ * Khushboo Tekchandani
+ * Adding code for DSR stable route selection
+ */
+
+/* =====================================================================
+ * Direction and location cues
+ * ===================================================================== */
+
+struct cues{
+   double xdir_; /* Direction vector elements. Does not have a z component*/
+   double ydir_;
+   double xloc_;
+   double yloc_; /* Location tuple elements. Does not have a z component */
+};
+
+
 /* ======================================================================
    DSR Header
    ====================================================================== */
@@ -161,6 +178,9 @@ private:
 	struct flow_timeout	sr_ftime_;
 	struct flow_unknown	sr_funk_;
 	struct flow_default_err sr_fdef_unk;
+
+   /* Khushboo Tekchandani*/
+      struct cues sr_cues_;
 
 public:
 	static int offset_;		/* offset for this header */
@@ -263,6 +283,12 @@ public:
 		addrs_[num_addrs_++].addr = a;
 	}
 
+   /*Khushboo Tekchandani*/
+   inline double& get_xdir() {return sr_cues_.xdir_;}
+   inline double& get_ydir() {return sr_cues_.ydir_;}
+   inline double& get_xloc() {return sr_cues_.xloc_;}
+   inline double& get_yloc() {return sr_cues_.yloc_;}
+
 	inline void init() {
 		valid_ = 1;
 		salvaged_ = 0;
@@ -279,6 +305,12 @@ public:
 		flow_unknown() = 0;
 		flow_default_unknown() = 0;
 		flow_header() = 0;
+
+       /*ktekchan*/
+       get_xloc() = 0;
+       get_yloc() = 0;
+       get_xdir() = 0;
+       get_ydir() = 0;
 	}
 
 #if 0
