@@ -1232,6 +1232,18 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   // make up and send out a route reply
   p.route.appendToPath(net_id);
   p.route.reverseInPlace();
+
+  /* ktekchan */
+  // Prepare cues to pass to addRoute function 
+  nsaddr_t temp = net_id.getNSAddr_t();
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+  cues curr_cues;
+  curr_cues.xloc_ = thisnode->X();
+  curr_cues.yloc_ = thisnode->Y();
+  curr_cues.xdir_ = thisnode->dX();
+  curr_cues.ydir_ = thisnode->dY();
+  /* ktekchan - end */
+
   route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id);
   p.dest = p.src;
   p.src = net_id;
@@ -1249,8 +1261,6 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
 
   /* ktekchan */
   // Add the required location and direction cues before sending out the packet
-  nsaddr_t temp = net_id.getNSAddr_t();
-  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
   srh->set_xloc(thisnode->X());
   srh->set_yloc(thisnode->Y());
   srh->set_xdir(thisnode->dX());
@@ -1717,6 +1727,16 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // flip the route around for the return to the requestor, and 
   // cache the route for future use
   p_copy.route.reverseInPlace();
+
+  /* ktekchan */
+  // Prepare cues to pass to the addRoute function
+  cues curr_cues;
+  curr_cues.xloc_ = thisnode->X();
+  curr_cues.yloc_ = thisnode->Y();
+  curr_cues.xdir_ = thisnode->dX();
+  curr_cues.ydir_ = thisnode->dY();
+  /* ktekchan - end */
+
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id);
 
   p_copy.route.resetIterator();
@@ -1795,6 +1815,17 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	  p.src.dump(), reply_route[0].dump(), srh->rtreq_seq(),
 	  reply_route[reply_route.length()-1].dump(),
 	  reply_route.dump());
+
+  /* ktekchan */
+  // Prepare cues to pass to the addRoute function
+  nsaddr_t temp = net_id.getNSAddr_t();
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+  cues curr_cues;
+  curr_cues.xloc_ = thisnode->X();
+  curr_cues.yloc_ = thisnode->Y();
+  curr_cues.xdir_ = thisnode->dX();
+  curr_cues.ydir_ = thisnode->dY();
+  /* ktekchan - end */
 
   // add the new route into our cache
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src);
@@ -2266,6 +2297,7 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
   new_srh->set_xdir(thisnode->dX());
   new_srh->set_ydir(thisnode->dY());
   /* ktekchan - end */
+
   for (int i = 0 ; i < p.route.length() ; i++)
     p.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p.route.length();
@@ -2282,6 +2314,16 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	  Scheduler::instance().clock(), net_id.dump(),
 	  p_copy.src.dump(), p_copy.dest.dump(), p.route.length(), 
 	  p.route.dump());
+
+
+  /* ktekchan */
+  // Prepare cues to pass to the addRoute function
+  cues curr_cues;
+  curr_cues.xloc_ = thisnode->X();
+  curr_cues.yloc_ = thisnode->Y();
+  curr_cues.xdir_ = thisnode->dX();
+  curr_cues.ydir_ = thisnode->dY();
+  /* ktekchan - end */
 
   // cache the route for future use (we learned the route from p)
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src);
