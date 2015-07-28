@@ -630,9 +630,10 @@ DSRAgent::recv(Packet* packet, Handler*)
     if (dst == IP_BROADCAST) {
       // extensions for mobileIP --Padma, 04/99.
       // Brdcast pkt - treat differently
-      if (p.src == net_id)
+      if (p.src == net_id){
 	// I have originated this pkt
 	sendOutBCastPkt(packet);
+      }
       else 
 	//hand it over to port-dmux
 	port_dmux_->recv(packet, (Handler*)0);
@@ -641,6 +642,17 @@ DSRAgent::recv(Packet* packet, Handler*)
       // this must be an outgoing packet, it doesn't have a SR header on it
       
       srh->init();		 // give packet an SR header now
+
+      /* ktekchan */
+      // Add the required location and direction cues before sending out the packet
+      nsaddr_t temp = net_id.getNSAddr_t();	
+      MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+      srh->set_xloc(thisnode->X());
+      srh->set_yloc(thisnode->Y());
+      srh->set_xdir(thisnode->dX());
+      srh->set_ydir(thisnode->dY());
+      /* ktekchan - end */
+
       cmh->size() += IP_HDR_LEN; // add on IP header size
       if (verbose)
 	trace("S %.9f _%s_ originating %s -> %s",
@@ -1234,6 +1246,17 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
 
   srh = hdr_sr::access(p.pkt);
   srh->init();
+
+  /* ktekchan */
+  // Add the required location and direction cues before sending out the packet
+  nsaddr_t temp = net_id.getNSAddr_t();
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+  srh->set_xloc(thisnode->X());
+  srh->set_yloc(thisnode->Y());
+  srh->set_xdir(thisnode->dX());
+  srh->set_ydir(thisnode->dY()); 
+  /* ktekchan - end */
+
   for (int i = 0 ; i < complete_route.length() ; i++)
     complete_route[i].fillSRAddr(srh->reply_addrs()[i]);
   srh->route_reply_len() = complete_route.length();
@@ -1521,6 +1544,15 @@ DSRAgent::getRouteForPacket(SRPacket &p, bool retry)
   cmnh->num_forwards() = 0;
   
   srh->init();
+  /* ktekchan */
+  // Add the required location and direction cues before sending out the packet
+  nsaddr_t temp = net_id.getNSAddr_t();	
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+  srh->set_xloc(thisnode->X());
+  srh->set_yloc(thisnode->Y());
+  srh->set_xdir(thisnode->dX());
+  srh->set_ydir(thisnode->dY());
+  /* ktekchan - end */
 
 
   if (BackOffTest(e, time)) {
@@ -1654,6 +1686,16 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 
   hdr_sr *new_srh =  hdr_sr::access(p_copy.pkt);
   new_srh->init();
+  /* ktekchan */
+  // Add the required location and direction cues before sending out the packet
+  nsaddr_t temp = net_id.getNSAddr_t();	
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+  new_srh->set_xloc(thisnode->X());
+  new_srh->set_yloc(thisnode->Y());
+  new_srh->set_xdir(thisnode->dX());
+  new_srh->set_ydir(thisnode->dY());
+  /* ktekchan - end */
+
   for (int i = 0 ; i < p_copy.route.length() ; i++)
     p_copy.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p_copy.route.length();
@@ -2215,6 +2257,15 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
   p.route.removeSection(heard_at, xmit_at);
   hdr_sr *new_srh =  hdr_sr::access(p_copy.pkt);
   new_srh->init();
+  /* ktekchan */
+  // Add the required location and direction cues before sending out the packet
+  nsaddr_t temp = net_id.getNSAddr_t();	
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
+  new_srh->set_xloc(thisnode->X());
+  new_srh->set_yloc(thisnode->Y());
+  new_srh->set_xdir(thisnode->dX());
+  new_srh->set_ydir(thisnode->dY());
+  /* ktekchan - end */
   for (int i = 0 ; i < p.route.length() ; i++)
     p.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p.route.length();
