@@ -59,6 +59,10 @@
 
 */
 
+/* ktekchan */
+#define DSR_STABLE
+/* ktekchan */
+
 #ifndef _requesttable_h
 #define _requesttable_h
 
@@ -72,8 +76,26 @@ class RequestTable {
 public:
   RequestTable(int size = 30);
   ~RequestTable();
+
+  /*ktekchan*/
+  #ifdef DSR_STABLE
+  void insert(const ID& net_id, int req_num, double stability);
+  #endif
+  /*ktekchan*/
+
+  #ifndef DSR_STABLE
   void insert(const ID& net_id, int req_num);
+  #endif
+
+  /*ktekchan*/
+  #ifdef DSR_STABLE
+  void insert(const ID& net_id, const ID& MAC_id, int req_num, double stability);
+  #endif
+  /*ktekchan*/
+  #ifndef DSR_STABLE
   void insert(const ID& net_id, const ID& MAC_id, int req_num);
+  #endif
+
   int get(const ID& id) const;
   // rtns 0 if id not found
   Entry* getEntry(const ID& id);  
@@ -92,6 +114,14 @@ struct Entry {
   int rt_reqs_outstanding;
   Time last_rt_req;
   LastType last_type;
+
+  /*ktekchan*/
+  // Each entry will have a stability associated with it
+  #ifdef DSR_STABLE
+  double stability;
+  #endif
+  /* ktekchan */
+
 };
 
 #endif //_requesttable_h

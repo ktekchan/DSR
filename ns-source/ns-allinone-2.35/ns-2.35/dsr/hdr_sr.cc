@@ -57,6 +57,8 @@
 #include <stdio.h>
 #include "hdr_sr.h"
 
+#define DSR_STABLE // ktekchan - For DSR Stability
+
 int hdr_sr::offset_;
 
 static class SRHeaderClass : public PacketHeaderClass {

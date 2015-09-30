@@ -37,7 +37,6 @@
 #ifndef ns_config_h
 #define ns_config_h
 
-
 #define MEMDEBUG_SIMULATIONS
 
 /* pick up standard types */
@@ -333,3 +332,4 @@ extern "C" {
 /* #define PORTMASK	0xff */
 
 #endif
+

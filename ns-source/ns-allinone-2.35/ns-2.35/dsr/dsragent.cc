@@ -86,6 +86,7 @@ extern "C" {
 ------------------------------------------------------------*/
 // #define NEW_IFQ_LOGIC
 // #define NEW_REQUEST_LOGIC
+#define DSR_STABLE // ktekchan - For DSR Stability
 #define NEW_SALVAGE_LOGIC
 
 #ifdef NEW_SALVAGE_LOGIC
@@ -203,7 +204,7 @@ Our strategy is as follows:
  but reply to them by reversing the route and unicasting.  don't do
  a route request (since that will end up returning the requestor lots of
  routes that are potentially unidirectional). By reversing the discovered 
- route for the route reply, only routes that are bidirectional will make it
+ routef for the route reply, only routes that are bidirectional will make it
  back the original requestor
 
  - once a packet goes into the sendbuffer, it can't be piggybacked on a 
@@ -754,6 +755,12 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
   hdr_cmn *cmh =  hdr_cmn::access(p.pkt);
   hdr_sr *srh =  hdr_sr::access(p.pkt);
 
+  /* ktekchan */
+  #ifdef DSR_STABLE
+  double currentStability = findStability(p.src,net_id);
+  #endif
+  /* ktekchan */
+
   if (srh->route_reply())
     { // we got a route_reply piggybacked on a route_request
       // accept the new source route before we do anything else
@@ -762,8 +769,8 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
     }
   
   if (srh->route_request())
-    {
-      if (dsragent_reply_only_to_first_rtreq  && ignoreRouteRequestp(p)) 
+    { /// track changes here KTEKCHAN
+      if (dsragent_reply_only_to_first_rtreq  && ignoreRouteRequestp(p,currentStability)) 
 	{ //we only respond to the first route request
 	  // we receive from a host 
 	  Packet::free(p.pkt);     // drop silently
@@ -772,7 +779,15 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
 	}
       else
 	{ // we're going to process this request now, so record the req_num
-	  request_table.insert(p.src, p.src, srh->rtreq_seq());
+     /*ktekchan*/
+      #ifdef DSR_STABLE
+      request_table.insert(p.src,p.src,srh->rtreq_seq(), currentStability);
+      #endif
+
+      #ifndef DSR_STABLE
+	   request_table.insert(p.src, p.src, srh->rtreq_seq());
+      #endif
+
 	  returnSrcRouteToRequestor(p);
 	}
     }
@@ -1027,6 +1042,28 @@ DSRAgent::handleRouteRequest(SRPacket &p)
   }
 #endif
 
+  /*ktekchan*/
+#ifdef DSR_STABLE
+
+  double currentStability = srh->get_stability();
+
+  if (ignoreRouteRequestp(p, currentStability)) 
+    {
+      if (verbose_srr) 
+        trace("SRR %.5f _%s_ dropped %s #%d (ignored)",
+              Scheduler::instance().clock(), net_id.dump(), p.src.dump(),
+              srh->rtreq_seq());
+      Packet::free(p.pkt);  // pkt is a route request we've already processed
+      p.pkt = 0;
+      return; // drop silently
+    }
+
+  // we're going to process this request now, so record the req_num
+  request_table.insert(p.src, p.src, srh->rtreq_seq(),currentStability);
+#endif
+/*ktekchan*/
+
+#ifndef DSR_STABLE
   if (ignoreRouteRequestp(p)) 
     {
       if (verbose_srr) 
@@ -1040,6 +1077,7 @@ DSRAgent::handleRouteRequest(SRPacket &p)
 
   // we're going to process this request now, so record the req_num
   request_table.insert(p.src, p.src, srh->rtreq_seq());
+#endif
 
   /*  - if it's a Ring 0 search, check the rt$ for a reply and use it if
      possible.  There's not much point in doing Ring 0 search if you're 
@@ -1131,7 +1169,7 @@ DSRAgent::handleRouteRequest(SRPacket &p)
   Helpers
 ---------------------------------------------------------------------------*/
 bool
-DSRAgent::ignoreRouteRequestp(SRPacket &p)
+DSRAgent::ignoreRouteRequestp(SRPacket &p, double currentStability)
 // should we ignore this route request?
 {
   hdr_sr *srh =  hdr_sr::access(p.pkt);
@@ -1139,8 +1177,24 @@ DSRAgent::ignoreRouteRequestp(SRPacket &p)
   if (request_table.get(p.src) >= srh->rtreq_seq())
     { // we've already processed a copy of this reqest so
       // we should drop the request silently
+
+      /* ktekchan */
+      // If the stability of the received request is greater than that
+      // of the existing stability, return false. Else return true.
+      #ifdef DSR_STABLE
+      Entry *existing = request_table.getEntry(p.src);
+     // Calculate current stability using the stability functions
+      double currentStability = srh->get_stability();
+      if(existing->stability > currentStability)
+         return true;
+      else
+         return false;
+      #endif
+
+      /* ktekchan */
       return true;
     }
+
   if (p.route.member(net_id,MAC_id))
     { // we're already on the route, drop silently
       return true;
@@ -1233,17 +1287,6 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   p.route.appendToPath(net_id);
   p.route.reverseInPlace();
 
-  /* ktekchan */
-  // Prepare cues to pass to addRoute function 
-  nsaddr_t temp = net_id.getNSAddr_t();
-  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
-  cues curr_cues;
-  curr_cues.xloc_ = thisnode->X();
-  curr_cues.yloc_ = thisnode->Y();
-  curr_cues.xdir_ = thisnode->dX();
-  curr_cues.ydir_ = thisnode->dY();
-  /* ktekchan - end */
-
   route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id);
   p.dest = p.src;
   p.src = net_id;
@@ -1261,6 +1304,8 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
 
   /* ktekchan */
   // Add the required location and direction cues before sending out the packet
+  nsaddr_t temp = net_id.getNSAddr_t();	
+  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
   srh->set_xloc(thisnode->X());
   srh->set_yloc(thisnode->Y());
   srh->set_xdir(thisnode->dX());
@@ -1728,15 +1773,6 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // cache the route for future use
   p_copy.route.reverseInPlace();
 
-  /* ktekchan */
-  // Prepare cues to pass to the addRoute function
-  cues curr_cues;
-  curr_cues.xloc_ = thisnode->X();
-  curr_cues.yloc_ = thisnode->Y();
-  curr_cues.xdir_ = thisnode->dX();
-  curr_cues.ydir_ = thisnode->dY();
-  /* ktekchan - end */
-
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id);
 
   p_copy.route.resetIterator();
@@ -1815,17 +1851,6 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	  p.src.dump(), reply_route[0].dump(), srh->rtreq_seq(),
 	  reply_route[reply_route.length()-1].dump(),
 	  reply_route.dump());
-
-  /* ktekchan */
-  // Prepare cues to pass to the addRoute function
-  nsaddr_t temp = net_id.getNSAddr_t();
-  MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
-  cues curr_cues;
-  curr_cues.xloc_ = thisnode->X();
-  curr_cues.yloc_ = thisnode->Y();
-  curr_cues.xdir_ = thisnode->dX();
-  curr_cues.ydir_ = thisnode->dY();
-  /* ktekchan - end */
 
   // add the new route into our cache
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src);
@@ -2314,16 +2339,6 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	  Scheduler::instance().clock(), net_id.dump(),
 	  p_copy.src.dump(), p_copy.dest.dump(), p.route.length(), 
 	  p.route.dump());
-
-
-  /* ktekchan */
-  // Prepare cues to pass to the addRoute function
-  cues curr_cues;
-  curr_cues.xloc_ = thisnode->X();
-  curr_cues.yloc_ = thisnode->Y();
-  curr_cues.xdir_ = thisnode->dX();
-  curr_cues.ydir_ = thisnode->dY();
-  /* ktekchan - end */
 
   // cache the route for future use (we learned the route from p)
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src);
@@ -2893,6 +2908,60 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
   sendOutPacketWithRoute(p, true);
 }
 
+
+/*ktekchan*/
+#ifdef DSR_STABLE
+double
+DSRAgent::findStability(const ID& from, const ID& to){
+   nsaddr_t from_ns = from.getNSAddr_t();
+   nsaddr_t to_ns = to.getNSAddr_t();
+   MobileNode *fromNode = (MobileNode *) ((Node::get_node_by_address(from_ns)));
+   MobileNode *toNode = (MobileNode *) ((Node::get_node_by_address(to_ns)));
+
+   double fromSpeed = fromNode->speed();
+   double toSpeed = toNode->speed();
+
+   // Calculating relative velocities
+   double relVelX = (fromSpeed*(fromNode->dX())) - (toSpeed*(toNode->dX()));
+   double relVelY = (fromSpeed*(fromNode->dY())) - (toSpeed*(toNode->dY()));
+
+   double distX = fromNode->X() - toNode->X();
+   double distY = fromNode->Y() - toNode->Y();
+
+   // Assuming a fixed transmission range of 250 m
+   double dist = 250.0 - sqrt((distX*distX) + (distY*distY));
+
+   // Calculating relative speed
+   double relSpeed = sqrt((relVelX*relVelX)+(relVelY*relVelY));
+
+   // Calculating time required to travel outside of the transmission range
+   double time = dist/relSpeed;
+   return time;
+}
+
+double
+DSRAgent::findStabilityAngle(const ID& from, const ID& to){
+
+   nsaddr_t from_ns = from.getNSAddr_t();
+   nsaddr_t to_ns = to.getNSAddr_t();
+   MobileNode *fromNode = (MobileNode *) ((Node::get_node_by_address(from_ns)));
+   MobileNode *toNode = (MobileNode *) ((Node::get_node_by_address(to_ns)));
+
+   double fromDirX = fromNode->dX();
+   double fromDirY = fromNode->dY();
+
+   double toDirX = toNode->dX();
+   double toDirY = toNode->dY();
+
+   // Calculating angle between the two nodes using inverse cosine
+   double angle = acos(((fromDirX*toDirX)+(fromDirY*toDirY))/
+                     ((sqrt((fromDirX*fromDirX)+(fromDirY*fromDirY)))+
+                        (sqrt((toDirX*toDirX)+(toDirY*toDirY)))));
+   return angle;
+}
+
+#endif
+/* ktekchan */
 
 #if 0
 

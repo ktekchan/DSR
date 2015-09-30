@@ -44,7 +44,8 @@ set opt(prop)		Propagation/TwoRayGround
 set opt(netif)		Phy/WirelessPhy
 #set opt(mac)		Mac/802_11
 set opt(mac)		Mac/802_11
-set opt(ifq)		Queue/DropTail/PriQueue
+#set opt(ifq)		Queue/DropTail/PriQueue
+set opt(ifq)      CMUPriQueue
 set opt(ll)		LL
 set opt(ant)            Antenna/OmniAntenna
 

@@ -59,6 +59,7 @@
 #include "path.h"
 #include "constants.h"
 #include "requesttable.h"
+#define DSR_STABLE //ktekchan - For DSR Stability
 
 RequestTable::RequestTable(int s): size(s)
 {
@@ -107,19 +108,66 @@ RequestTable::getEntry(const ID& id)
       table[ptr].last_arp = 0.0;
       table[ptr].rt_reqs_outstanding = 0;
       table[ptr].last_rt_req = -(rt_rq_period + 1.0);
+
+      /*ktekchan*/
+      #ifdef DSR_STABLE
+      table[ptr].stability = 0.0;
+      #endif
+      /*ktekchan*/
+
       existing_entry = ptr;
       ptr = (ptr+1)%size;
     }
   return &(table[existing_entry]);
 }
 
+/*ktekchan*/
+#ifdef DSR_STABLE
+void
+RequestTable::insert(const ID& net_id, int req_num, double stability)
+{
+  insert(net_id,::invalid_addr,req_num,stability);
+}
+#endif
+/*ktekchan*/
+
+#ifndef DSR_STABLE
 void
 RequestTable::insert(const ID& net_id, int req_num)
 {
   insert(net_id,::invalid_addr,req_num);
 }
+#endif
 
+/*ktekchan*/
+#ifdef DSR_STABLE
+void
+RequestTable::insert(const ID& net_id, const ID& MAC_id, int req_num, double stability){
 
+   int existing_entry = find(net_id, MAC_id);
+
+   if(existing_entry < size){
+      
+      if(table[existing_entry].MAC_id == ::invalid_addr)
+         table[existing_entry].MAC_id == MAC_id;
+      table[existing_entry].req_num = req_num;
+      table[existing_entry].stability = stability;
+      return;
+   }
+
+   table[ptr].MAC_id = MAC_id;
+   table[ptr].net_id = net_id;
+   table[ptr].req_num = req_num;
+   table[ptr].stability = stability;
+   table[ptr].last_arp = 0.0;
+   table[ptr].rt_reqs_outstanding = 0;
+   table[ptr].last_rt_req = -(rt_rq_period + 1.0);
+   ptr = (ptr+1)%size;
+}
+#endif
+/*ktekchan*/
+
+#ifndef DSR_STABLE
 void
 RequestTable::insert(const ID& net_id, const ID& MAC_id, int req_num)
 {
@@ -142,3 +190,4 @@ RequestTable::insert(const ID& net_id, const ID& MAC_id, int req_num)
   table[ptr].last_rt_req = -(rt_rq_period + 1.0);
   ptr = (ptr+1)%size;
 }
+#endif

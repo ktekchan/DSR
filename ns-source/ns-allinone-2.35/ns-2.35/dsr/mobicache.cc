@@ -474,6 +474,7 @@ MobiCache::findRoute(ID dest, Path& route, int for_me)
     }
 }
 
+
 /*===========================================================================
   class Cache routines
 ---------------------------------------------------------------------------*/
@@ -696,7 +697,7 @@ Cache::pickVictim(int exclude)
  */
 void
 MobiCache::checkRoute(Path & p,
-                      int & subroute_bad_count,
+                     int & subroute_bad_count,
                       int & link_bad_count,
                       double & link_bad_time,
                       int & link_bad_tested,

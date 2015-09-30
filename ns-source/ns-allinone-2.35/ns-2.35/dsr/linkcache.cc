@@ -196,12 +196,24 @@ public:
 	// if not there already
 	int command(int argc, const char*const* argv);
 
+   /* ktekchan */
+   // Passes the location and direction cues that have been received from the
+   // node. Theses cues will be used to calculate metrics that will be
+   // used in making routing decisions
+   //void addRouteWithCues(const Path& route, Time t, const ID& who_from, cues node_info);
+   /* ktekchan - end */
+
 protected:
 	dsrLinkHead lcache[LC_MAX_NODES + 1];
 	// note the zeroth index is not used
 
 	int addLink(const ID& from, const ID& to,
 		    int flags, double timeout = LINK_TIMEOUT, int cost = 1);
+
+   /*ktekchan*/
+ //  int addLink(const ID& from, const ID& to, int flags,
+   //      double timeout = LINK_TIMEOUT, find_link_cost());
+   /*end*/
 	int delLink(const ID& from, const ID& to);
 	Link* findLink(int from, int to);
 	void purgeLink(void);
@@ -240,6 +252,9 @@ private:
 	void dijkstra(void);
 	void dump_dijkstra(int dst);
 	double find_timeout(ID a, ID b, bool discovered);
+
+   /*ktekchan*/
+   double find_link_expiry(ID a, ID b, cues node_info);
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -432,6 +447,43 @@ LinkCache::addRoute(const Path& route, Time t, const ID& who_from)
 	  stat.route_add_bad_count++;
 #endif
 }
+
+/*ktekchan*/
+
+void
+LinkCache::addRoute(const Path& route, Time t, const ID& who_from, cues node_info)
+{
+   Path rt;
+   int c;
+
+   if(pre_addRoute(route, rt, t, who_from) == 0)
+      return;
+
+#ifdef DSR_CACHE_STATS
+   int link_add_count = stat.link_add_count;
+   int link_add_bad_count = stat.link_add_bad_count;
+#endif
+
+   //Pass the cues to add link
+   for(c = 0; c < rt.length() - 1; c++) {
+      if(addLink(rt[c], rt[c+1], LINK_FLAG_UP,
+         find_timeout(rt[c], rt[c+1], true))) {
+#ifdef DSR_CACHE_STATS
+            checkLink(rt[c], rt[c+1], ACTION_ADD_ROUTE);
+#endif
+         }
+   }
+
+#ifdef DSR_CACHE_STATS
+   if(stat.link_add_count > link_add_count)
+      stat.route_add_count++;
+   if(stat.link_add_bad_count > link_add_bad_count)
+      stat.route_add_bad_count++;
+#endif
+
+}
+/* ktekchan - end */
+
 
 bool
 LinkCache::findRoute(ID dest, Path& route, int for_me = 0)

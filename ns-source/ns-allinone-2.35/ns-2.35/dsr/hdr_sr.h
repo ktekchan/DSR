@@ -57,6 +57,7 @@
 */
 #ifndef sr_hdr_h
 #define sr_hdr_h
+#define DSR_STABLE // ktekchan - For DSR Stability
 
 #include <assert.h>
 
@@ -140,6 +141,7 @@ struct flow_default_err {
 	struct flow_error err_flows_[MAX_ROUTE_ERRORS];
 };
 
+#ifdef DSR_STABLE
 /* 
  * Khushboo Tekchandani (ktekchan)
  * Adding code for DSR stable route selection
@@ -154,9 +156,11 @@ struct cues{
    double ydir_;
    double xloc_;
    double yloc_; /* Location tuple elements. Does not have a z component */
+   double stability_;
 };
 
 /* ktekchan - end */
+#endif
 
 
 /* ======================================================================
@@ -182,7 +186,9 @@ private:
 	struct flow_default_err sr_fdef_unk;
 
 	/* ktekchan */
-      	struct cues sr_cues_;
+   #ifdef DSR_STABLE
+   struct cues sr_cues_;
+   #endif
 	/* ktekchan - end */
 
 public:
@@ -287,23 +293,36 @@ public:
 	}
 
 	/* ktekchan */
+   #ifdef DSR_STABLE
 	inline void set_xdir(double xdir) {sr_cues_.xdir_ = xdir;}
    	inline void set_ydir(double ydir) {sr_cues_.ydir_ = ydir;}
    	inline void set_xloc(double xloc) {sr_cues_.xloc_ = xloc;}
    	inline void set_yloc(double yloc) {sr_cues_.yloc_ = yloc;}
+      inline void set_stability(double stability) 
+         {sr_cues_.stability_ = stability;}
    
 	inline double& get_xdir() {return sr_cues_.xdir_;}
    	inline double& get_ydir() {return sr_cues_.ydir_;}
    	inline double& get_xloc() {return sr_cues_.xloc_;}
    	inline double& get_yloc() {return sr_cues_.yloc_;}
-
+      inline double& get_stability() 
+         {return sr_cues_.stability_;}
+   #endif
 	/* ktekchan - end */
 
 	inline void init() {
 		valid_ = 1;
 		salvaged_ = 0;
 		num_addrs_ = 0;
-		cur_addr_ = 0;
+      cur_addr_ = 0;
+
+      #ifdef DSR_STABLE
+      sr_cues_.xdir_ = 0.0;
+      sr_cues_.ydir_ = 0.0;
+      sr_cues_.xloc_ = 0.0;
+      sr_cues_.yloc_ = 0.0;
+      sr_cues_.stability_ = 0.0;
+      #endif
 
 		route_request() = 0;
 		route_reply() = 0;

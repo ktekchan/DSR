@@ -82,6 +82,11 @@ class DSRAgent;
 
 #define DSR_FILTER_TAP		/* process a packet only once via the tap */
 
+/* ktekchan */
+// For DSR Stability model
+#define DSR_STABLE
+/* ktekchan */
+
 class ArpCallbackClass;
 struct RtRepHoldoff {
   ID requestor;
@@ -194,10 +199,21 @@ private:
   void handleFlowForwarding(SRPacket &p, int flowidx);
   void handleDefaultForwarding(SRPacket &p);
 
+  /* ktekchan */
+  #ifdef DSR_STABLE
+  bool ignoreRouteRequestp(SRPacket& p, double stability);
+  // Changing the definition of ignoreRouteRequestp to accept stability which
+  // will be compare to existing stability in the requesttable
+  #endif
+  /*ktekchan*/
+
+  #ifndef DSR_STABLE
   bool ignoreRouteRequestp(SRPacket& p);
   // assumes p is a route_request: answers true if it should be ignored.
   // does not update the request table (you have to do that yourself if
   // you want this packet ignored in the future)
+  #endif
+
   void sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay = 0.0);
   // take packet and send it out packet must a have a route in it
   // fresh determines whether route is reset first
@@ -260,6 +276,18 @@ private:
   // get it till xmit_at, so all the nodes between heard_at and xmit_at
   // can be elided.  Send originator of p a gratuitous route reply to 
   // tell them this.
+
+  /* ktekchan */
+  #ifdef DSR_STABLE
+  // In the DSR stability model, we need to calculate the stability of links
+  // between two nodes based on the cue information received.
+  // If the cues consist of direction and location, we use findStability and
+  // if we have only the directions, we use findStabilityAngle
+  double findStability(const ID& from, const ID& to);
+
+  double findStabilityAngle(const ID& from, const ID& to);
+  #endif
+  /* ktekchan - end */
 
   void testinit();
   void trace(char* fmt, ...);
