@@ -646,6 +646,9 @@ DSRAgent::recv(Packet* packet, Handler*)
 
       /* ktekchan */
       // Add the required location and direction cues before sending out the packet
+      // We do not have to worry about adding the stability here as this deals
+      // with directly sending packet to the destination as it has the source
+      // route
       nsaddr_t temp = net_id.getNSAddr_t();	
       MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
       srh->set_xloc(thisnode->X());
@@ -757,7 +760,7 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
 
   /* ktekchan */
   #ifdef DSR_STABLE
-  double currentStability = findStability(p.src,net_id);
+  double currentStability = srh->get_stability();
   #endif
   /* ktekchan */
 
@@ -1045,7 +1048,9 @@ DSRAgent::handleRouteRequest(SRPacket &p)
   /*ktekchan*/
 #ifdef DSR_STABLE
 
-  double currentStability = srh->get_stability();
+  // Calculate the current link's stability and check if this needs to be
+  // ignored
+  double currentStability = findStability(p.src, net_id);
 
   if (ignoreRouteRequestp(p, currentStability)) 
     {
@@ -1184,7 +1189,6 @@ DSRAgent::ignoreRouteRequestp(SRPacket &p, double currentStability)
       #ifdef DSR_STABLE
       Entry *existing = request_table.getEntry(p.src);
      // Calculate current stability using the stability functions
-      double currentStability = srh->get_stability();
       if(existing->stability > currentStability)
          return true;
       else
@@ -1192,7 +1196,9 @@ DSRAgent::ignoreRouteRequestp(SRPacket &p, double currentStability)
       #endif
 
       /* ktekchan */
+#ifndef DSR_STABLE
       return true;
+#endif
     }
 
   if (p.route.member(net_id,MAC_id))
@@ -1310,6 +1316,9 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   srh->set_yloc(thisnode->Y());
   srh->set_xdir(thisnode->dX());
   srh->set_ydir(thisnode->dY()); 
+
+  double currentStability = findStability(p.dest, net_id);
+  srh->set_stability(currentStability);
   /* ktekchan - end */
 
   for (int i = 0 ; i < complete_route.length() ; i++)
@@ -1601,12 +1610,14 @@ DSRAgent::getRouteForPacket(SRPacket &p, bool retry)
   srh->init();
   /* ktekchan */
   // Add the required location and direction cues before sending out the packet
+#ifdef DSR_STABLE
   nsaddr_t temp = net_id.getNSAddr_t();	
   MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
   srh->set_xloc(thisnode->X());
   srh->set_yloc(thisnode->Y());
   srh->set_xdir(thisnode->dX());
   srh->set_ydir(thisnode->dY());
+#endif
   /* ktekchan - end */
 
 
@@ -1743,12 +1754,14 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   new_srh->init();
   /* ktekchan */
   // Add the required location and direction cues before sending out the packet
+#ifdef DSR_STABLE
   nsaddr_t temp = net_id.getNSAddr_t();	
   MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
   new_srh->set_xloc(thisnode->X());
   new_srh->set_yloc(thisnode->Y());
   new_srh->set_xdir(thisnode->dX());
   new_srh->set_ydir(thisnode->dY());
+#endif
   /* ktekchan - end */
 
   for (int i = 0 ; i < p_copy.route.length() ; i++)
@@ -2315,12 +2328,14 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
   new_srh->init();
   /* ktekchan */
   // Add the required location and direction cues before sending out the packet
+#ifdef DSR_STABLE
   nsaddr_t temp = net_id.getNSAddr_t();	
   MobileNode *thisnode = (MobileNode *) ((Node::get_node_by_address(temp)));
   new_srh->set_xloc(thisnode->X());
   new_srh->set_yloc(thisnode->Y());
   new_srh->set_xdir(thisnode->dX());
   new_srh->set_ydir(thisnode->dY());
+#endif
   /* ktekchan - end */
 
   for (int i = 0 ; i < p.route.length() ; i++)
