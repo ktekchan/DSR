@@ -283,9 +283,10 @@ private:
   // between two nodes based on the cue information received.
   // If the cues consist of direction and location, we use findStability and
   // if we have only the directions, we use findStabilityAngle
-  double findStability(const ID& from, const ID& to);
+//  double findStability(const ID& from, const ID& to);
+   double findStability(hdr_sr*);
 
-  double findStabilityAngle(const ID& from, const ID& to);
+  double findStabilityAngle(hdr_sr*);
   #endif
   /* ktekchan - end */
 

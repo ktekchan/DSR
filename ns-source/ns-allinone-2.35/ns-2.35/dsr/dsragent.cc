@@ -655,6 +655,7 @@ DSRAgent::recv(Packet* packet, Handler*)
       srh->set_yloc(thisnode->Y());
       srh->set_xdir(thisnode->dX());
       srh->set_ydir(thisnode->dY());
+      srh->set_speed(thisnode->speed());
       /* ktekchan - end */
 
       cmh->size() += IP_HDR_LEN; // add on IP header size
@@ -1050,7 +1051,7 @@ DSRAgent::handleRouteRequest(SRPacket &p)
 
   // Calculate the current link's stability and check if this needs to be
   // ignored
-  double currentStability = findStability(p.src, net_id);
+  double currentStability = findStabilityAngle(srh);//findStability(srh);
 
   if (ignoreRouteRequestp(p, currentStability)) 
     {
@@ -1315,10 +1316,9 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   srh->set_xloc(thisnode->X());
   srh->set_yloc(thisnode->Y());
   srh->set_xdir(thisnode->dX());
-  srh->set_ydir(thisnode->dY()); 
-
-  double currentStability = findStability(p.dest, net_id);
-  srh->set_stability(currentStability);
+  srh->set_ydir(thisnode->dY());
+  srh->set_speed(thisnode->speed());
+   
   /* ktekchan - end */
 
   for (int i = 0 ; i < complete_route.length() ; i++)
@@ -1617,6 +1617,7 @@ DSRAgent::getRouteForPacket(SRPacket &p, bool retry)
   srh->set_yloc(thisnode->Y());
   srh->set_xdir(thisnode->dX());
   srh->set_ydir(thisnode->dY());
+  srh->set_speed(thisnode->speed());
 #endif
   /* ktekchan - end */
 
@@ -1761,6 +1762,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   new_srh->set_yloc(thisnode->Y());
   new_srh->set_xdir(thisnode->dX());
   new_srh->set_ydir(thisnode->dY());
+  new_srh->set_speed(thisnode->speed());
 #endif
   /* ktekchan - end */
 
@@ -2335,6 +2337,7 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
   new_srh->set_yloc(thisnode->Y());
   new_srh->set_xdir(thisnode->dX());
   new_srh->set_ydir(thisnode->dY());
+  new_srh->set_speed(thisnode->speed());
 #endif
   /* ktekchan - end */
 
@@ -2927,43 +2930,44 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
 /*ktekchan*/
 #ifdef DSR_STABLE
 double
-DSRAgent::findStability(const ID& from, const ID& to){
-   nsaddr_t from_ns = from.getNSAddr_t();
-   nsaddr_t to_ns = to.getNSAddr_t();
-   MobileNode *fromNode = (MobileNode *) ((Node::get_node_by_address(from_ns)));
+DSRAgent::findStability(hdr_sr* srh){
+
+   // Stability of the link between the node from where the packet was received
+   // and the current node.
+   nsaddr_t to_ns = net_id.getNSAddr_t();
    MobileNode *toNode = (MobileNode *) ((Node::get_node_by_address(to_ns)));
 
-   double fromSpeed = fromNode->speed();
+   double fromSpeed = srh->get_speed();
    double toSpeed = toNode->speed();
 
    // Calculating relative velocities
-   double relVelX = (fromSpeed*(fromNode->dX())) - (toSpeed*(toNode->dX()));
-   double relVelY = (fromSpeed*(fromNode->dY())) - (toSpeed*(toNode->dY()));
+   double relVelX = (fromSpeed*(srh->get_xdir())) - (toSpeed*(toNode->dX()));
+   double relVelY = (fromSpeed*(srh->get_ydir())) - (toSpeed*(toNode->dY()));
 
-   double distX = fromNode->X() - toNode->X();
-   double distY = fromNode->Y() - toNode->Y();
+   double distX = srh->get_xloc() - toNode->X();
+   double distY = srh->get_yloc() - toNode->Y();
 
    // Assuming a fixed transmission range of 250 m
-   double dist = 250.0 - sqrt((distX*distX) + (distY*distY));
+   double temp = (distX*distX) + (distY*distY);
+   double dist = 250.0 - sqrt(temp);
 
    // Calculating relative speed
    double relSpeed = sqrt((relVelX*relVelX)+(relVelY*relVelY));
 
    // Calculating time required to travel outside of the transmission range
-   double time = dist/relSpeed;
+   double time = fabs(dist)/relSpeed;
+
    return time;
 }
 
 double
-DSRAgent::findStabilityAngle(const ID& from, const ID& to){
+DSRAgent::findStabilityAngle(hdr_sr* srh){
 
-   nsaddr_t from_ns = from.getNSAddr_t();
-   nsaddr_t to_ns = to.getNSAddr_t();
-   MobileNode *fromNode = (MobileNode *) ((Node::get_node_by_address(from_ns)));
+   nsaddr_t to_ns = net_id.getNSAddr_t();
    MobileNode *toNode = (MobileNode *) ((Node::get_node_by_address(to_ns)));
 
-   double fromDirX = fromNode->dX();
-   double fromDirY = fromNode->dY();
+   double fromDirX = srh->get_xdir();
+   double fromDirY = srh->get_ydir();
 
    double toDirX = toNode->dX();
    double toDirY = toNode->dY();
